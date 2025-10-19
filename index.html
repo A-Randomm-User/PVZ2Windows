@@ -25,11 +25,10 @@ async function loadExcel() {
     const workbook = XLSX.read(arrayBuffer, { type: 'array' });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
-    // 获取完整数据范围
+    // 获取完整范围
     const range = XLSX.utils.decode_range(sheet['!ref']);
     let html = "<table>";
 
-    // 逐行逐列读取所有单元格
     for (let R = range.s.r; R <= range.e.r; ++R) {
       html += "<tr>";
       for (let C = range.s.c; C <= range.e.c; ++C) {
@@ -40,13 +39,18 @@ async function loadExcel() {
         if (cell) {
           cellContent = cell.v ?? "";
 
-          // 如果是网址 → 生成链接
-          if (typeof cellContent === "string" && cellContent.match(/^https?:\/\//i)) {
+          // ✅ 支持三种协议： http(s)、itms-services、ftp
+          if (
+            typeof cellContent === "string" &&
+            cellContent.match(/^(https?:\/\/|itms-services:\/\/|ftp:\/\/)/i)
+          ) {
             cellContent = `<a href="${cellContent}" target="_blank">链接</a>`;
           }
         }
 
-        html += R === 0 ? `<th>${cellContent}</th>` : `<td>${cellContent}</td>`;
+        html += R === 0
+          ? `<th>${cellContent}</th>`
+          : `<td>${cellContent}</td>`;
       }
       html += "</tr>";
     }
