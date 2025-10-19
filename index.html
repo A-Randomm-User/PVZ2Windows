@@ -2,53 +2,65 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>自动读取 Excel 并显示表格</title>
+<title>Excel 链接保留版</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <style>
   body { font-family: Arial; margin: 20px; }
   table { border-collapse: collapse; width: 100%; margin-top: 20px; }
   th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
   th { background-color: #f5f5f5; }
+  a { color: #0078d4; text-decoration: none; }
+  a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
-<h2>Excel 数据表</h2>
+<h2>Excel 数据表（保留超链接文字）</h2>
 <div id="tableContainer">正在加载 data.xlsx...</div>
 
 <script>
 async function loadExcel() {
   try {
-    // 读取同目录下的 data.xlsx
     const response = await fetch('data.xlsx');
     const arrayBuffer = await response.arrayBuffer();
-
-    // 用 SheetJS 解析
     const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
 
-    // 生成 HTML 表格
+    // 获取完整的范围
+    const range = XLSX.utils.decode_range(sheet['!ref']);
     let html = "<table>";
-    rows.forEach((row, i) => {
+
+    for (let R = range.s.r; R <= range.e.r; ++R) {
       html += "<tr>";
-      row.forEach(cell => {
-        html += i === 0
-          ? `<th>${cell ?? ""}</th>`
-          : `<td>${cell ?? ""}</td>`;
-      });
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        const cell = sheet[cellAddress];
+        let cellContent = "";
+
+        if (cell) {
+          // 如果单元格有超链接
+          if (cell.l && cell.l.Target) {
+            const link = cell.l.Target;
+            const text = cell.v || link;
+            cellContent = `<a href="${link}" target="_blank">${text}</a>`;
+          } else {
+            cellContent = cell.v ?? "";
+          }
+        }
+
+        html += R === 0 ? `<th>${cellContent}</th>` : `<td>${cellContent}</td>`;
+      }
       html += "</tr>";
-    });
+    }
+
     html += "</table>";
-
-    document.getElementById('tableContainer').innerHTML = html;
-
+    document.getElementById("tableContainer").innerHTML = html;
   } catch (err) {
-    document.getElementById('tableContainer').innerHTML =
+    document.getElementById("tableContainer").innerHTML =
       `<p style="color:red;">❌ 无法加载 data.xlsx：${err.message}</p>`;
   }
 }
 
-// 页面加载后执行
 loadExcel();
 </script>
 </body>
