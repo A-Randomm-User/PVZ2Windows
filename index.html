@@ -2,16 +2,10 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>多 Sheet Excel 表</title>
+<title>Excel 链接表</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <style>
   body { font-family: Arial; margin: 20px; }
-  button {
-    margin: 5px; padding: 8px 14px; border: none;
-    background: #0078d4; color: white; border-radius: 6px;
-    cursor: pointer;
-  }
-  button:hover { background: #005fa3; }
   table { border-collapse: collapse; width: 100%; margin-top: 20px; }
   th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
   th { background-color: #f5f5f5; }
@@ -20,45 +14,26 @@
 </style>
 </head>
 <body>
-<h2>选择要查看的软件表格</h2>
-
-<!-- ✅ 你自己手动加按钮 -->
-<button onclick="showSheet('Official Minecraft')">Official Minecraft</button>
-<button onclick="showSheet('Official Minecraft')">Official Minecraft</button>
-
-<hr>
-<div id="tableContainer">请点击上方按钮以加载数据</div>
+<h2>Excel 数据表</h2>
+<div id="tableContainer">正在加载 data.xlsx...</div>
 
 <script>
-let workbookCache = null; // 缓存 Excel，避免每次重新下载
-
-async function loadWorkbook() {
-  if (workbookCache) return workbookCache; // 已加载过则直接返回
-
-  const response = await fetch('data.xlsx');
-  const arrayBuffer = await response.arrayBuffer();
-  workbookCache = XLSX.read(arrayBuffer, { type: 'array' });
-  return workbookCache;
-}
-
-async function showSheet(sheetName) {
+async function loadExcel() {
   try {
-    const workbook = await loadWorkbook();
-    const sheet = workbook.Sheets[sheetName];
-    if (!sheet) {
-      document.getElementById('tableContainer').innerHTML =
-        `<p style="color:red;">❌ 未找到工作表：${sheetName}</p>`;
-      return;
-    }
+    const response = await fetch('data.xlsx');
+    const arrayBuffer = await response.arrayBuffer();
 
+    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-    let html = `<h3>${sheetName}</h3><table>`;
+
+    let html = "<table>";
     rows.forEach((row, i) => {
       html += "<tr>";
       row.forEach(cell => {
         let cellContent = cell ?? "";
 
-        // 如果是网址 → 显示为链接文字
+        // 如果是网址，就变成可点击链接
         if (typeof cellContent === "string" && cellContent.match(/^https?:\/\//i)) {
           cellContent = `<a href="${cellContent}" target="_blank">链接</a>`;
         }
@@ -74,9 +49,11 @@ async function showSheet(sheetName) {
     document.getElementById('tableContainer').innerHTML = html;
   } catch (err) {
     document.getElementById('tableContainer').innerHTML =
-      `<p style="color:red;">❌ 读取 Excel 时出错：${err.message}</p>`;
+      `<p style="color:red;">❌ 无法加载 data.xlsx：${err.message}</p>`;
   }
 }
+
+loadExcel();
 </script>
 </body>
 </html>
