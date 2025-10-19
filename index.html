@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>Excel 链接保留版</title>
+<title>Excel 链接表</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <style>
   body { font-family: Arial; margin: 20px; }
@@ -14,7 +14,7 @@
 </style>
 </head>
 <body>
-<h2>Excel 数据表（保留超链接文字）</h2>
+<h2>Excel 数据表</h2>
 <div id="tableContainer">正在加载 data.xlsx...</div>
 
 <script>
@@ -22,41 +22,33 @@ async function loadExcel() {
   try {
     const response = await fetch('data.xlsx');
     const arrayBuffer = await response.arrayBuffer();
+
     const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-    // 获取完整的范围
-    const range = XLSX.utils.decode_range(sheet['!ref']);
     let html = "<table>";
-
-    for (let R = range.s.r; R <= range.e.r; ++R) {
+    rows.forEach((row, i) => {
       html += "<tr>";
-      for (let C = range.s.c; C <= range.e.c; ++C) {
-        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-        const cell = sheet[cellAddress];
-        let cellContent = "";
+      row.forEach(cell => {
+        let cellContent = cell ?? "";
 
-        if (cell) {
-          // 如果单元格有超链接
-          if (cell.l && cell.l.Target) {
-            const link = cell.l.Target;
-            const text = cell.v || link;
-            cellContent = `<a href="${link}" target="_blank">${text}</a>`;
-          } else {
-            cellContent = cell.v ?? "";
-          }
+        // 如果是网址，就变成可点击链接
+        if (typeof cellContent === "string" && cellContent.match(/^https?:\/\//i)) {
+          cellContent = `<a href="${cellContent}" target="_blank">链接</a>`;
         }
 
-        html += R === 0 ? `<th>${cellContent}</th>` : `<td>${cellContent}</td>`;
-      }
+        html += i === 0
+          ? `<th>${cellContent}</th>`
+          : `<td>${cellContent}</td>`;
+      });
       html += "</tr>";
-    }
-
+    });
     html += "</table>";
-    document.getElementById("tableContainer").innerHTML = html;
+
+    document.getElementById('tableContainer').innerHTML = html;
   } catch (err) {
-    document.getElementById("tableContainer").innerHTML =
+    document.getElementById('tableContainer').innerHTML =
       `<p style="color:red;">❌ 无法加载 data.xlsx：${err.message}</p>`;
   }
 }
